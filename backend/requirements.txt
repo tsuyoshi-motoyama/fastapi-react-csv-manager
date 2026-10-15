@@ -1,0 +1,2 @@
+fastapi ## PythonAPIフレームワーク
+uvicorn[standard] ## FastAPIを動かすASGIサーバー
