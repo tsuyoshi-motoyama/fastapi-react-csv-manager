@@ -22,6 +22,19 @@ def create_product(product: ProductCreate):
         "price": product.price
     }
 
+def create_products(products: list[ProductCreate]):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            for product in products:
+                cur.execute(
+                    """
+                    INSERT INTO products (name, price)
+                    VALUES (%s, %s)
+                    """,
+                    (product.name, product.price)
+                )
+    return {"registered_count": len(products)}
+
 def search_products(name: str = ""):
     with get_connection() as conn:
         with conn.cursor(row_factory=dict_row) as cur:

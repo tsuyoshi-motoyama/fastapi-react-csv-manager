@@ -1,5 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ProductCreate(BaseModel):
-    name: str
-    price: int
+    name: str = Field(min_length=1, max_length=100)
+    price: int = Field(gt=0)

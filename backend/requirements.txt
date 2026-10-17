@@ -1,3 +1,4 @@
 fastapi ## PythonAPIフレームワーク
 uvicorn[standard] ## FastAPIを動かすASGIサーバー
 psycopg[binary] ## PythonからPostgreSQLを操作
+python-multipart ## HTTPリクエストの multipart/form-data 形式を解析する
