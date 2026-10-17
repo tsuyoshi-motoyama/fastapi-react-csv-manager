@@ -1,4 +1,5 @@
-from fastapi import APIRouter,  HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi.responses import StreamingResponse
 from schemas.product import ProductCreate
 from repositories import product as product_repository
 
@@ -55,3 +56,29 @@ async def upload_products(file: UploadFile = File(...)):
         "filename": file.filename,
         "registered_count": result["registered_count"]
     }
+
+@router.get("/download")
+def download_products():
+    products = product_repository.search_products("")
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["id", "name", "price"])
+
+    for product in products:
+        writer.writerow([
+            product["id"],
+            product["name"],
+            product["price"]
+        ])
+
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue().encode("utf-8-sig")]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+             "Content-Disposition": 'attachment; filename="products.csv"'
+        }
+    )

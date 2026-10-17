@@ -62,3 +62,13 @@ export async function uploadProductsCsv(file: File) {
 
   return data
 }
+
+export async function downloadProductsCsv(): Proimse<Blob> {
+  const response = await fetch(`${PRODUCT_URL}/download`)
+
+  if (!response.ok) {
+    throw new Error('CSVダウンロードに失敗しました')
+  } 
+
+  return response.blob()
+}
