@@ -2,3 +2,6 @@ fastapi ## PythonAPIフレームワーク
 uvicorn[standard] ## FastAPIを動かすASGIサーバー
 psycopg[binary] ## PythonからPostgreSQLを操作
 python-multipart ## HTTPリクエストの multipart/form-data 形式を解析する
+email-validator ## メールアドレスの構文・ドメイン検証
+pwdlib[argon2] ## パスワードハッシュ化
+PyJWT ## JSON Web Token (JWT) のエンコード（生成）とデコード（検証）を行う

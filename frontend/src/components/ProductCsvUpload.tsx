@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { uploadProductsCsv } from '../api/products'
 
 function ProductCsvUpload() {
     const [file, setFile] = useState<File | null>(null)
     const [message, setMessage] = useState('')
+    const fileInputRef = useRef<HTMLInputElement>(null)
     
     const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
         event.preventDefault()
@@ -16,9 +17,11 @@ function ProductCsvUpload() {
 
         try {
             const data = await uploadProductsCsv(file)
-            console.log(data)
             setMessage(`${data.registered_count}件の商品を登録しました`)
             setFile(null)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+            }
         } catch (error) {
             console.error(error)
             if (error instanceof Error) {
@@ -36,6 +39,7 @@ function ProductCsvUpload() {
                 <div>
                 <label>CSVファイル</label>
                 <input
+                    ref={fileInputRef}
                     type="file"
                     accept=".csv,text/csv"
                     onChange={(event) => {

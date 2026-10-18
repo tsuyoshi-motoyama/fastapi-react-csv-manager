@@ -12,6 +12,8 @@ services:
       DB_NAME: csv_manager
       DB_USER: appuser
       DB_PASSWORD: apppass
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
 
   frontend:
     build:
@@ -35,6 +37,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  adminer:
+    image: adminer:6.1.2-standalone
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "127.0.0.1:8025:8025"
 
 volumes:
   postgres_data:
