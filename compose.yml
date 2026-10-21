@@ -14,6 +14,7 @@ services:
       DB_PASSWORD: apppass
       SMTP_HOST: mailhog
       SMTP_PORT: "1025"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
 
   frontend:
     build:

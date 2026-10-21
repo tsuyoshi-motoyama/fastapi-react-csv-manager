@@ -1,7 +1,12 @@
 import { useState, useRef } from 'react'
-import { uploadProductsCsv } from '../api/products'
+import { uploadProductsCsv, UnauthorizedError } from '../api/products'
 
-function ProductCsvUpload() {
+type ProductCsvUploadProps = {
+  token: string
+  onLogout: () => void
+}
+
+function ProductCsvUpload({ token, onLogout }: ProductCsvUploadProps) {
     const [file, setFile] = useState<File | null>(null)
     const [message, setMessage] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -16,13 +21,17 @@ function ProductCsvUpload() {
         }
 
         try {
-            const data = await uploadProductsCsv(file)
+            const data = await uploadProductsCsv(file, token)
             setMessage(`${data.registered_count}件の商品を登録しました`)
             setFile(null)
             if (fileInputRef.current) {
                 fileInputRef.current.value = ''
             }
         } catch (error) {
+            if (error instanceof UnauthorizedError) {
+                onLogout()
+                return
+            }
             console.error(error)
             if (error instanceof Error) {
                 setMessage(error.message)

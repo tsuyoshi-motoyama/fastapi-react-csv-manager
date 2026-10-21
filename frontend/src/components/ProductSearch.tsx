@@ -1,17 +1,27 @@
 import { useState } from 'react'
-import { searchProducts } from '../api/products'
+import { searchProducts, UnauthorizedError } from '../api/products'
 import type { Product } from '../types/product'
 
-function ProductSearch() {
+type ProductSearchProps = {
+  token: string
+  onLogout: () => void
+}
+
+function ProductSearch({ token, onLogout }: ProductSearchProps) {
     const [searchName, setSearchName] = useState('')
     const [products, setProducts] = useState<Product[]>([])
 
     const handleSearch = async () => {
         try { 
-            const data = await searchProducts(searchName)
+            const data = await searchProducts(searchName, token)
             setProducts(data)
         } catch (error) {
-        console.error(error)
+          if (error instanceof UnauthorizedError) {
+            onLogout()
+            return
+          }
+          console.error(error)
+          setSearchName(error)
         }
     }
 

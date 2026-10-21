@@ -1,7 +1,12 @@
 import { useState } from 'react'
-import { createProduct } from '../api/products'
+import { createProduct, UnauthorizedError } from '../api/products'
 
-function ProductForm() {
+type ProductFormProps = {
+  token: string
+  onLogout: () => void
+}
+
+function ProductForm({ token, onLogout }: ProductFormProps) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [message, setMessage] = useState('')
@@ -11,12 +16,16 @@ function ProductForm() {
     setMessage('')
 
     try {
-      const data = await createProduct(name, Number(price))
+      const data = await createProduct(name, Number(price), token)
       setMessage(`商品ID ${data.id} を登録しました`)
 
       setName('')
       setPrice('')
     } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        onLogout()
+        return
+      }
       console.error(error)
       setMessage('登録に失敗しました')
     }

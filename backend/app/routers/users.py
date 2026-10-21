@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from psycopg.errors import UniqueViolation
 from schemas.user import UserCreate, UserLogin
 from repositories.user import create_user, verify_email, find_user_by_email
+from dependencies.auth import get_current_user
 from mail import send_mail
-from security import verify_password
+from security import verify_password, create_access_token
 
 router = APIRouter()
 
@@ -78,7 +79,16 @@ def login(user: UserLogin):
             detail="アカウントが有効化されていません"
         )
 
+    access_token = create_access_token(db_user["id"])
+
     return {
-        "message": "認証成功",
-        "user_id": db_user["id"]
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
+@router.get("/users/me")
+def get_my_profile(current_user = Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "email": current_user["email"]
     }

@@ -1,14 +1,19 @@
 import { useState } from 'react'
-import { downloadProductsCsv } from '../api/products'
+import { downloadProductsCsv, UnauthorizedError } from '../api/products'
 
-function ProductCsvDownload() {
+type ProductCsvDownloadProps = {
+  token: string
+  onLogout: () => void
+}
+
+function ProductCsvDownload({token, onLogout}: ProductCsvDownloadProps) {
   const [message, setMessage] = useState('')
 
   const handleDownload = async () => {
     setMessage('')
 
     try {
-      const blob = await downloadProductsCsv()
+      const blob = await downloadProductsCsv(token)
 
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -19,6 +24,11 @@ function ProductCsvDownload() {
 
       URL.revokeObjectURL(url)
     } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        onLogout()
+        return
+      }
+      console.error(error)
       console.error(error)
       setMessage('CSVダウンロードに失敗しました')
     }

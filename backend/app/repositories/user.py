@@ -119,3 +119,21 @@ def find_user_by_email(email: str):
             )
 
             return cur.fetchone()
+
+def find_user_by_id(user_id: int):
+    with get_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    email,
+                    email_verified_at,
+                    is_active
+                FROM users
+                WHERE id = %s
+                """,
+                (user_id,)
+            )
+
+            return cur.fetchone()
