@@ -1,229 +1,102 @@
-# FastAPI + React CSV Manager
+## ユーザー認証・認可機能
 
-FastAPI、React（TypeScript）、PostgreSQLを使用した商品管理アプリケーションです。
+FastAPIとReactを使用して、JWTによるユーザー認証と、ユーザー単位での商品データ管理を実装しています。
 
-Docker Composeを使用して開発環境を構築し、商品登録・検索機能を実装しています。
+### ユーザー登録・メール認証
 
-今後はCSVファイルによる商品一括登録・ダウンロード機能を追加する予定です。
+- メールアドレスとパスワードによるユーザー登録
+- Argon2idによるパスワードのハッシュ化
+- メールアドレスの重複登録防止（HTTP 409）
+- MailHogを使用したメール認証
+- 認証用トークンの生成とSHA-256ハッシュによるDB保存
+- 認証トークンの有効期限チェック
+- メール認証完了時の`email_verified_at`更新
+- `is_active`による管理者の利用許可制御
 
-## 技術構成
+メール認証の完了とアカウントの利用許可は別々に管理しています。メール認証が完了していても、`is_active = false` の場合はログインできません。
 
-| 分類 | 技術 |
-|---|---|
-| フロントエンド | React / TypeScript / Vite |
-| バックエンド | Python / FastAPI |
-| データベース | PostgreSQL 17 |
-| DB接続 | psycopg |
-| 開発環境 | Docker / Docker Compose |
+### ログイン・JWT認証
 
-## ディレクトリ構成
+- メールアドレスとパスワードによるログイン
+- パスワードハッシュの検証
+- メール認証状態・アカウント有効状態の確認
+- JWTの発行（HS256）
+- JWTの有効期限：30分
+- JWTの署名・有効期限の検証
+- JWTの`sub`からユーザーIDを取得
+- FastAPIの`Depends()`による認証処理の共通化
+- `GET /users/me`によるログインユーザー情報の取得
 
-```text
-.
-├── docker-compose.yml
-├── frontend/
-│   ├── Dockerfile
-│   ├── package.json
-│   └── src/
-│       ├── api/
-│       │   └── products.ts
-│       ├── components/
-│       │   ├── ProductForm.tsx
-│       │   └── ProductSearch.tsx
-│       ├── types/
-│       │   └── product.ts
-│       ├── App.tsx
-│       └── main.tsx
-└── backend/
-    ├── Dockerfile
-    ├── requirements.txt
-    └── app/
-        ├── __init__.py
-        ├── main.py
-        ├── database.py
-        ├── routers/
-        │   ├── __init__.py
-        │   ├── index.py
-        │   ├── health.py
-        │   └── products.py
-        ├── schemas/
-        │   ├── __init__.py
-        │   └── product.py
-        └── repositories/
-            ├── __init__.py
-            ├── health.py
-            └── product.py
-```
+JWTの検証後もDBからユーザー情報を取得し、現在のアカウント状態を確認します。そのため、JWT発行後に管理者がアカウントを無効化した場合も、保護されたAPIへのアクセスを拒否できます。
 
-## アーキテクチャ
+### ユーザー別の商品管理
 
-```text
-ブラウザ
-   │
-   ▼
-React（TypeScript）
-   │
-   │ HTTP / JSON
-   ▼
-FastAPI
-   │
-   ├── Router
-   │     リクエスト受付・ルーティング
-   │
-   ├── Schema
-   │     リクエストデータの型定義・検証
-   │
-   └── Repository
-         SQL実行・データアクセス
-            │
-            ▼
-        PostgreSQL
-```
+`products`テーブルに`user_id`を追加し、商品データをユーザーごとに管理しています。
 
-### フロントエンドの責務
+以下の機能にJWT認証を適用しています。
 
-| ディレクトリ・ファイル | 役割 |
-|---|---|
-| `App.tsx` | コンポーネントの配置 |
-| `components/` | 商品登録・検索画面 |
-| `api/` | FastAPIとのHTTP通信 |
-| `types/` | TypeScriptの型定義 |
+| 機能 | API | 処理 |
+|---|---|---|
+| 商品登録 | `POST /products` | 認証済みユーザーIDを付与して登録 |
+| 商品検索 | `GET /products` | 認証済みユーザーの商品だけを検索 |
+| CSV一括登録 | `POST /products/upload` | CSV内の商品すべてにユーザーIDを付与 |
+| CSVダウンロード | `GET /products/download` | 認証済みユーザーの商品だけをCSV出力 |
 
-### バックエンドの責務
+ユーザーIDはリクエストボディやクエリパラメータから受け取らず、検証済みJWTから取得しています。
 
-| ディレクトリ・ファイル | 役割 |
-|---|---|
-| `main.py` | FastAPI初期化・CORS設定・Router登録 |
-| `routers/` | APIエンドポイントの定義 |
-| `schemas/` | Pydanticによるデータ検証 |
-| `repositories/` | PostgreSQLへのSQL実行 |
-| `database.py` | DB接続処理 |
-
-現段階ではService層を設けず、RouterからRepositoryを呼び出す構成としています。
-
-## 開発環境の起動
-
-プロジェクトのルートディレクトリで以下を実行します。
-
-```bash
-docker compose up -d --build
-```
-
-起動後、以下のURLにアクセスします。
-
-| サービス | URL |
-|---|---|
-| React | http://localhost:5173 |
-| FastAPI | http://localhost:8000 |
-| Swagger UI | http://localhost:8000/docs |
-
-停止する場合：
-
-```bash
-docker compose down
-```
-
-## データベース
-
-PostgreSQLに以下の`products`テーブルを作成します。
+商品検索では、以下のように`user_id`を条件に含めることで、他ユーザーの商品データを取得できないようにしています。
 
 ```sql
-CREATE TABLE products (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    price INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+SELECT id, name, price, created_at
+FROM products
+WHERE user_id = %s
+  AND name ILIKE %s
+ORDER BY id DESC;
 ```
 
-| カラム | 型 | 内容 |
-|---|---|---|
-| id | SERIAL | 商品ID（主キー） |
-| name | VARCHAR(255) | 商品名 |
-| price | INTEGER | 価格 |
-| created_at | TIMESTAMP | 登録日時 |
+### React側の認証処理
 
-データはDockerのVolumeで永続化します。
+- ログインフォームからFastAPIのログインAPIを呼び出し
+- JWTを`App.tsx`の`useState`で管理
+- 未ログイン時は商品管理画面を非表示
+- JWTをpropsで各商品コンポーネントへ受け渡し
+- APIリクエストに`Authorization: Bearer <token>`を付与
+- ログアウト時にReactのstateからJWTを削除
+- HTTP 401を`UnauthorizedError`として共通判定
+- JWTの期限切れ・無効時にログイン画面へ戻す
 
-## 実装済み機能
+現在、JWTはReactのメモリ上に保持しています。ページを再読み込みするとログイン状態は解除されます。
 
-### 1. 商品登録
+また、ログアウトはクライアント側のJWT破棄によって実現しており、発行済みJWTをサーバー側で失効させる処理は実装していません。
 
-Reactの商品登録フォームからFastAPIへPOSTリクエストを送信し、PostgreSQLに商品を登録します。
+### APIエラー処理
 
-**API**
+| HTTPステータス | 内容 |
+|---|---|
+| 401 | JWT未指定・無効・有効期限切れなど |
+| 403 | メール未認証・アカウント利用停止など |
+| 409 | メールアドレスの重複登録 |
+| 422 | リクエスト・CSVデータのバリデーションエラー |
 
-`POST /products`
+CSVアップロードでは、既存の行番号付きバリデーションエラーを維持しています。
 
-リクエスト例：
+### 動作確認済み
 
-```json
-{
-  "name": "テスト商品",
-  "price": 1000
-}
-```
+- ユーザー登録からMailHogによるメール認証
+- 管理者によるアカウント有効化後のログイン
+- JWTを利用した保護APIへのアクセス
+- `is_active = false`でのアクセス拒否
+- ユーザーごとの商品登録・検索
+- ユーザーごとのCSV登録・ダウンロード
+- ReactからのJWT付きAPIリクエスト
+- JWTの有効期限切れによる自動ログアウト
+- ログアウト後の再ログイン
 
-レスポンス例：
+### 今後の検討事項
 
-```json
-{
-  "id": 1,
-  "name": "テスト商品",
-  "price": 1000
-}
-```
-
-### 2. 商品検索
-
-商品名を指定して、PostgreSQLに登録されている商品を検索します。
-
-**API**
-
-`GET /products?name=テスト`
-
-- `ILIKE`による部分一致検索
-- 検索条件はURLエンコードして送信
-- 取得結果をReactのテーブルに表示
-
-### 3. データベース接続確認
-
-**API**
-
-`GET /db-check`
-
-PostgreSQLへの接続を確認し、接続成功時にデータベースのバージョン情報を返します。
-
-### 4. API稼働確認
-
-**API**
-
-`GET /`
-
-FastAPIの稼働状態を返します。
-
-## CORS設定
-
-ReactとFastAPIは異なるポートで起動するため、FastAPI側でCORSを設定しています。
-
-- 許可Origin：`http://localhost:5173`
-- 許可メソッド：`GET`、`POST`
-- 許可ヘッダー：`Content-Type`
-
-## 今後の実装予定
-
-- [ ] CSVファイルのアップロード
-- [ ] CSVデータのバリデーション
-- [ ] CSVによる商品一括登録
-- [ ] 商品データのCSVダウンロード
-- [ ] ログイン機能の実装
-- [ ] 指定されたユーザーのみ商品登録・CSV登録を許可する認可制御
-- [ ] 登録・検索画面の改善
-- [ ] CSV登録時の重複処理・異常系への対応
-
-## 開発方針
-
-- フロントエンドとバックエンドの責務を分離する
-- API通信・画面処理・DBアクセスをファイル単位で整理する
-- 最小限の機能から実装し、動作確認しながら拡張する
-- 正常系の完成後、必要に応じて異常系やセキュリティ対策を追加する
+- Reactの認証処理の共通化（カスタムフックなど）
+- ログイン状態の保持方法
+- JWTの更新・失効方式
+- ユーザー管理画面
+- 商品更新・削除機能
+- 認証・認可の自動テスト
