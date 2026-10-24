@@ -1,3 +1,10 @@
+## 環境構築
+
+Dockerを使用したFastAPI・Reactの開発環境です。
+環境構築の手順については、以下を参照してください。
+
+- [FastAPI・ReactのDocker環境構築](https://github.com/tsuyoshi-motoyama/docker-fastapi-react)
+
 ## ユーザー認証・認可機能
 
 FastAPIとReactを使用して、JWTによるユーザー認証と、ユーザー単位での商品データ管理を実装しています。

@@ -1,27 +1,23 @@
 import { useState } from 'react'
-import { searchProducts, UnauthorizedError } from '../api/products'
+import { searchProducts } from '../api/products'
+import { useApiError } from '../hooks/useApiError'
 import type { Product } from '../types/product'
+import type { AuthenticatedProps } from '../types/auth'
 
-type ProductSearchProps = {
-  token: string
-  onLogout: () => void
-}
-
-function ProductSearch({ token, onLogout }: ProductSearchProps) {
+function ProductSearch({ token, onLogout }: AuthenticatedProps) {
     const [searchName, setSearchName] = useState('')
+    const [message, setMessage] = useState('')
     const [products, setProducts] = useState<Product[]>([])
+    const handleApiError = useApiError(onLogout)
 
     const handleSearch = async () => {
+        setMessage('')
+
         try { 
             const data = await searchProducts(searchName, token)
             setProducts(data)
         } catch (error) {
-          if (error instanceof UnauthorizedError) {
-            onLogout()
-            return
-          }
-          console.error(error)
-          setSearchName(error)
+          setMessage(handleApiError(error, '登録に失敗しました'))
         }
     }
 
@@ -38,6 +34,8 @@ function ProductSearch({ token, onLogout }: ProductSearchProps) {
             <button type="button" onClick={handleSearch}>
                 検索
             </button>
+
+            {message && <p role="alert">{message}</p>}
 
             <table>
                 <thead>

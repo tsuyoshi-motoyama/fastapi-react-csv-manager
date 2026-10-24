@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { login } from '../api/auth'
+import { UnauthorizedError } from '../api/client'
 
 type LoginFormProps = {
   onLogin: (token: string) => void
@@ -14,29 +16,18 @@ function LoginForm({ onLogin }: LoginFormProps) {
     setMessage('')
 
     try {
-      const response = await fetch('http://localhost:8000/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
-
-      if (!response.ok) {
-        setMessage('ログインに失敗しました')
-        return
-      }
-
-      const data = await response.json()
+      const data = await login(email, password)
 
       onLogin(data.access_token)
-      console.log('JWT:', data.access_token)
       setMessage('ログイン成功')
-    } catch {
-      setMessage('通信エラーが発生しました')
+    } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        setMessage('ログインに失敗しました')
+      } else if (error instanceof TypeError) {
+        setMessage('通信エラーが発生しました')
+      } else {
+        setMessage('ログインに失敗しました')
+      }
     }
   }
 

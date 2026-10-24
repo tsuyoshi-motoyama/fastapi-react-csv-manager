@@ -1,15 +1,13 @@
 import { useState, useRef } from 'react'
-import { uploadProductsCsv, UnauthorizedError } from '../api/products'
+import { uploadProductsCsv } from '../api/products'
+import { useApiError } from '../hooks/useApiError'
+import type { AuthenticatedProps } from '../types/auth'
 
-type ProductCsvUploadProps = {
-  token: string
-  onLogout: () => void
-}
-
-function ProductCsvUpload({ token, onLogout }: ProductCsvUploadProps) {
+function ProductCsvUpload({ token, onLogout }: AuthenticatedProps ) {
     const [file, setFile] = useState<File | null>(null)
     const [message, setMessage] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const handleApiError = useApiError(onLogout)
     
     const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
         event.preventDefault()
@@ -28,16 +26,14 @@ function ProductCsvUpload({ token, onLogout }: ProductCsvUploadProps) {
                 fileInputRef.current.value = ''
             }
         } catch (error) {
-            if (error instanceof UnauthorizedError) {
-                onLogout()
-                return
-            }
-            console.error(error)
-            if (error instanceof Error) {
-                setMessage(error.message)
-            } else {
-                setMessage('CSVアップロードに失敗しました')
-            }
+            setMessage(
+                handleApiError(
+                    error, 
+                    error instanceof Error
+                        ? error.message
+                        : 'CSVアップロードに失敗しました',
+                )
+           )
         }
     }
 

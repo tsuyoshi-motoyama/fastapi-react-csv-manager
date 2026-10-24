@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import { downloadProductsCsv, UnauthorizedError } from '../api/products'
+import { downloadProductsCsv } from '../api/products'
+import { useApiError } from '../hooks/useApiError'
+import type { AuthenticatedProps } from '../types/auth'
 
-type ProductCsvDownloadProps = {
-  token: string
-  onLogout: () => void
-}
 
-function ProductCsvDownload({token, onLogout}: ProductCsvDownloadProps) {
+function ProductCsvDownload({token, onLogout}: AuthenticatedProps) {
   const [message, setMessage] = useState('')
+  const handleApiError = useApiError(onLogout)
 
   const handleDownload = async () => {
     setMessage('')
@@ -24,13 +23,7 @@ function ProductCsvDownload({token, onLogout}: ProductCsvDownloadProps) {
 
       URL.revokeObjectURL(url)
     } catch (error) {
-      if (error instanceof UnauthorizedError) {
-        onLogout()
-        return
-      }
-      console.error(error)
-      console.error(error)
-      setMessage('CSVダウンロードに失敗しました')
+      setMessage(handleApiError(error, '登録に失敗しました'))
     }
   }
 

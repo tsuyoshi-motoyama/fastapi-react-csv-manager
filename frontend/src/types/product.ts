@@ -3,3 +3,7 @@ export type Product = {
   name: string
   price: number
 }
+
+export type ProductCsvUploadResponse = {
+  registered_count: number
+}

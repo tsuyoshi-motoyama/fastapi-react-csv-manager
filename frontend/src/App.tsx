@@ -18,7 +18,7 @@ function App() {
       
       {token && (
         <>
-          <button type="button" onClick={() => setToken(null)}>
+          <button type="button" onClick={handleLogout}>
             ログアウト
           </button>
           <ProductForm token={token} onLogout={handleLogout} />

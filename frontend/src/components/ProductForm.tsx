@@ -1,15 +1,14 @@
 import { useState } from 'react'
-import { createProduct, UnauthorizedError } from '../api/products'
+import { createProduct } from '../api/products'
+import { useApiError } from '../hooks/useApiError'
+import ProductFormView from './views/ProductFormView'
+import type { AuthenticatedProps } from '../types/auth'
 
-type ProductFormProps = {
-  token: string
-  onLogout: () => void
-}
-
-function ProductForm({ token, onLogout }: ProductFormProps) {
+function ProductForm({ token, onLogout }: AuthenticatedProps ) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [message, setMessage] = useState('')
+  const handleApiError = useApiError(onLogout)
 
   const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -22,46 +21,19 @@ function ProductForm({ token, onLogout }: ProductFormProps) {
       setName('')
       setPrice('')
     } catch (error) {
-      if (error instanceof UnauthorizedError) {
-        onLogout()
-        return
-      }
-      console.error(error)
-      setMessage('登録に失敗しました')
+      setMessage(handleApiError(error, '登録に失敗しました'))
     }
   }
 
   return (
-    <>
-      <h1>商品登録</h1>
-
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>商品名</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-          />
-        </div>
-
-        <div>
-          <label>価格</label>
-          <input
-            type="number"
-            value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            min="0"
-            required
-          />
-        </div>
-
-        <button type="submit">登録</button>
-      </form>
-
-      <p>{message}</p>
-    </>
+    <ProductFormView
+      name={name}
+      price={price}
+      message={message}
+      onNameChange={setName}
+      onPriceChange={setPrice}
+      onSubmit={handleSubmit}
+    />
   )
 }
 

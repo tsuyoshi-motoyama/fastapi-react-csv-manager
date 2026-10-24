@@ -1,21 +1,20 @@
+import { apiFetch } from './client'
 import type { Product } from '../types/product'
+import type { ProductCsvUploadResponse } from '../types/product'
+export { UnauthorizedError } from './client'
 
-const PRODUCT_URL: string = 'http://localhost:8000/products'
-
-export async function createProduct(name: string, price: number, token: string) {
-    const response = await fetch(PRODUCT_URL, {
+export async function createProduct(name: string, price: number, token: string):  Promise<Product> {
+    const response = await apiFetch(
+      '/products',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name,
-          price,
-        }),
-    }) 
-
-    checkUnauthorized(response)
+        body: JSON.stringify({ name, price }),
+      },
+      token,
+    )
 
     if (!response.ok) {
       throw new Error('商品登録に失敗しました')
@@ -24,17 +23,12 @@ export async function createProduct(name: string, price: number, token: string) 
     return response.json()
 }
 
-export async function searchProducts(name: string, token: string) {
-  const response = await fetch(
-    `${PRODUCT_URL}?name=${encodeURIComponent(name)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+export async function searchProducts(name: string, token: string): Promise<Product[]> {
+  const response = await apiFetch(
+    `/products?name=${encodeURIComponent(name)}`,
+    {},
+    token,
   )
-
-  checkUnauthorized(response)
 
   if (!response.ok) {
     throw new Error(`HTTP Error: ${response.status}`)
@@ -43,19 +37,18 @@ export async function searchProducts(name: string, token: string) {
   return (await response.json()) as Product[]
 }
 
-export async function uploadProductsCsv(file: File, token: string) {
+export async function uploadProductsCsv(file: File, token: string): Promise<ProductCsvUploadResponse> {
   const formData = new FormData()
   formData.append('file', file)
 
-  const response = await fetch(`${PRODUCT_URL}/upload`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const response = await apiFetch(
+    '/products/upload',
+    {
+      method: 'POST',
+      body: formData,
     },
-    body: formData
-  })
-
-  checkUnauthorized(response)
+    token,
+  )
 
   const data = await response.json()
 
@@ -83,31 +76,11 @@ export async function uploadProductsCsv(file: File, token: string) {
 }
 
 export async function downloadProductsCsv(token: string): Promise<Blob> {
-  const response = await fetch(
-    `${PRODUCT_URL}/download`,{
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  checkUnauthorized(response)
+  const response = await apiFetch('/products/download', {}, token)
 
   if (!response.ok) {
     throw new Error('CSVダウンロードに失敗しました')
   } 
 
   return response.blob()
-}
-
-export class UnauthorizedError extends Error {
-  constructor() {
-    super('認証の有効期限が切れたか、認証情報が無効です')
-    this.name = 'UnauthorizedError'
-  }
-}
-
-function checkUnauthorized(response: Response): void {
-  if (response.status === 401) {
-    throw new UnauthorizedError()
-  }
 }
